@@ -3,7 +3,8 @@
     "includes": [
       { "pattern": "standard\\.properties" },
       { "pattern": "dev/tamboui/.*\\.properties" },
-      { "pattern": "dev/tamboui/.*\\.json" }
+      { "pattern": "dev/tamboui/.*\\.json" },
+      { "pattern": "org/jline/nativ/.*" }
     ]
   }
 }

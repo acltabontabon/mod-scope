@@ -10,77 +10,6 @@ permissions:
   contents: write
 
 jobs:
-  native-macos:
-    name: Native image (${{ matrix.arch }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest   # macOS 14, Apple Silicon (arm64)
-            arch: arm64
-          - os: macos-13       # macOS 13, Intel (x86_64)
-            arch: x86_64
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Extract version
-        id: version
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Set up GraalVM with native-image
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '25'
-          distribution: 'graalvm'
-          cache: 'maven'
-
-      - name: Set pom.xml to release version
-        if: github.event_name == 'release'
-        run: |
-          chmod +x ./mvnw
-          ./mvnw --no-transfer-progress \
-            versions:set \
-            -DnewVersion=${{ steps.version.outputs.version }} \
-            -DgenerateBackupPoms=false
-
-      - name: Build native image
-        run: |
-          chmod +x ./mvnw
-          ./mvnw --no-transfer-progress \
-            -Pnative native:compile \
-            -DskipTests
-
-      - name: Package binary
-        id: package
-        run: |
-          ARCHIVE="modscope-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.tar.gz"
-          tar -czf "target/$ARCHIVE" -C target modscope
-          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
-
-      - name: Upload to release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: target/${{ steps.package.outputs.archive }}
-
-      - name: Upload as build artifact
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: modscope-macos-${{ matrix.arch }}
-          path: target/${{ steps.package.outputs.archive }}
-          retention-days: 7
-
   native-windows:
     name: Native image (windows-x64)
     runs-on: windows-latest
@@ -145,7 +74,7 @@ jobs:
   bump-version:
     name: Bump to next snapshot
     if: github.event_name == 'release'
-    needs: [native-macos, native-windows]
+    needs: native-windows
     runs-on: ubuntu-latest
 
     steps:
