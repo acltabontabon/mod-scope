@@ -29,8 +29,10 @@ public class ModScopeTuiApp implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         // Enable VT processing + UTF-8 on the Windows console before JLine initialises,
         // so JLine detects a VT-capable terminal and doesn't fall back to dumb mode.
-        WindowsConsoleInit.apply();
-        System.setProperty("org.jline.terminal.provider", "ffm");
+        if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            WindowsConsoleInit.apply();
+            System.setProperty("org.jline.terminal.provider", "ffm");
+        }
 
         TuiState state = new TuiState();
         state.scanService = scanService;

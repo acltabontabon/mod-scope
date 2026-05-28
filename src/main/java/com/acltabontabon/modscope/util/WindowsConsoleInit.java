@@ -19,7 +19,7 @@ public final class WindowsConsoleInit {
         if (!System.getProperty("os.name", "").toLowerCase().contains("win")) return;
         try {
             Linker linker = Linker.nativeLinker();
-            SymbolLookup kernel32 = SymbolLookup.libraryLookup("kernel32.dll", Arena.global());
+            SymbolLookup kernel32 = SymbolLookup.libraryLookup("kernel32", Arena.global());
 
             MethodHandle setOutputCP = linker.downcallHandle(
                 kernel32.find("SetConsoleOutputCP").orElseThrow(),
