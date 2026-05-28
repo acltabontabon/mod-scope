@@ -38,16 +38,6 @@ Every scan prints `READ-ONLY SCAN` at startup and writes a safety note into ever
 
 ---
 
-## Supported games
-
-| Profile ID | Game |
-|------------|------|
-| `007-first-light` | 007 First Light (Steam App ID: 3768760) |
-
-More profiles can be added by implementing `GameProfile` and registering in `GameProfileRegistry`.
-
----
-
 ## Reports
 
 Reports are written to `.modscope/reports/` by default.
@@ -85,22 +75,6 @@ Reports are written to `.modscope/reports/` by default.
 - **motionblur**: found in 3 match(es)
 - **fov**: found in 2 match(es)
 ```
-
----
-
-## Roadmap
-
-- [x] Steam install detection (Windows, Mac, Linux)
-- [x] File inventory with categorization and hashing
-- [x] QoL hint scanner
-- [x] Markdown + JSON report generation
-- [x] TamboUI interactive TUI
-- [x] GraalVM native image build profile
-- [ ] Manual game folder entry via TUI text input
-- [ ] Additional game profiles (Cyberpunk 2077, Hitman, Stellar Blade, …)
-- [ ] Recent reports viewer in TUI
-- [ ] Diff comparison between two scans
-- [ ] Mod candidate scoring
 
 ---
 
