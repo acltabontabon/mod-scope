@@ -4,13 +4,19 @@ import java.util.Set;
 
 public final class FileClassifier {
 
-    private static final Set<String> EXECUTABLE_EXTS = Set.of(
-        "exe", "dll", "so", "dylib", "bin", "elf"
+    private static final Set<String> GAME_EXECUTABLE_EXTS = Set.of("exe", "bin", "elf");
+    private static final Set<String> LIBRARY_EXTS = Set.of("dll", "so", "dylib");
+
+    private static final Set<String> STEAM_LIBRARY_NAMES = Set.of(
+        "steam_api.dll", "steam_api64.dll", "steamclient.dll", "steamclient64.dll",
+        "tier0_s.dll", "vstdlib_s.dll", "steam_emu.dll"
     );
+
     private static final Set<String> ARCHIVE_EXTS = Set.of(
         "pak", "zip", "rar", "7z", "tar", "gz", "bz2", "xz",
         "arc", "bundle", "ba2", "bsa", "upk", "uasset",
-        "tiger", "rpkg", "forge", "big", "dat", "cab"
+        "tiger", "rpkg", "forge", "big", "cab",
+        "ucas", "utoc"
     );
     private static final Set<String> CONFIG_EXTS = Set.of(
         "cfg", "config", "ini", "toml", "properties", "conf",
@@ -39,9 +45,23 @@ public final class FileClassifier {
 
     private FileClassifier() {}
 
-    public static FileCategory classify(String extension, long sizeBytes) {
+    public static FileCategory classify(String filename, String extension, long sizeBytes) {
         String ext = extension.toLowerCase();
-        if (EXECUTABLE_EXTS.contains(ext)) return FileCategory.EXECUTABLE;
+        String name = filename.toLowerCase();
+
+        // packagedefinition.txt is a Glacier engine chunk manifest
+        if (name.equals("packagedefinition.txt")) return FileCategory.PACKAGE_DEFINITION;
+
+        if (GAME_EXECUTABLE_EXTS.contains(ext)) return FileCategory.GAME_EXECUTABLE;
+
+        if (LIBRARY_EXTS.contains(ext)) {
+            if (STEAM_LIBRARY_NAMES.contains(name)) return FileCategory.STEAM_LIBRARY;
+            if (name.startsWith("nv") || name.startsWith("cuda") || name.startsWith("nvapi")) {
+                return FileCategory.NVIDIA_LIBRARY;
+            }
+            return FileCategory.RUNTIME_LIBRARY;
+        }
+
         if (ARCHIVE_EXTS.contains(ext)) return FileCategory.ARCHIVE;
         if (CONFIG_EXTS.contains(ext)) return FileCategory.CONFIG;
         if (VIDEO_EXTS.contains(ext)) return FileCategory.VIDEO;
@@ -55,5 +75,12 @@ public final class FileClassifier {
     public static boolean isTextReadable(String extension) {
         String ext = extension.toLowerCase();
         return CONFIG_EXTS.contains(ext) || TEXT_EXTS.contains(ext);
+    }
+
+    public static boolean isBinaryScannable(FileCategory category) {
+        return category == FileCategory.ARCHIVE
+            || category == FileCategory.GAME_EXECUTABLE
+            || category == FileCategory.RUNTIME_LIBRARY
+            || category == FileCategory.UNKNOWN_LARGE;
     }
 }

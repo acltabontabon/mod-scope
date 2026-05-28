@@ -36,6 +36,7 @@ public final class TuiState {
     public volatile int archives = 0;
     public volatile int videos = 0;
     public volatile int hintsFound = 0;
+    public volatile int binaryHints = 0;
     public volatile boolean scanStarted = false;
     public final List<String> scanLog = new ArrayList<>();
 

@@ -47,7 +47,6 @@ public class ModScopeTuiApp implements ApplicationRunner {
         try (TuiRunner tui = TuiRunner.create(config)) {
             tui.run(
                 (event, runner) -> {
-                    // Drive re-renders during scan without needing key presses
                     if (event instanceof TickEvent) {
                         return state.screen == TuiScreen.SCAN_PROGRESS;
                     }

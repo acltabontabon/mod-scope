@@ -1,21 +1,30 @@
 package com.acltabontabon.modscope.core;
 
+import com.acltabontabon.modscope.engine.EngineDetectionResult;
+import com.acltabontabon.modscope.engine.EngineDetector;
 import com.acltabontabon.modscope.game.GameInstall;
 import com.acltabontabon.modscope.game.GameInstallDetector;
 import com.acltabontabon.modscope.game.GameProfile;
 import com.acltabontabon.modscope.game.GameProfileRegistry;
 import com.acltabontabon.modscope.report.ReportWriter;
 import com.acltabontabon.modscope.save.SaveCandidate;
+import com.acltabontabon.modscope.save.SaveFileEntry;
+import com.acltabontabon.modscope.save.SaveInventoryScanner;
 import com.acltabontabon.modscope.save.SaveLocator;
+import com.acltabontabon.modscope.scan.BinaryStringHint;
+import com.acltabontabon.modscope.scan.BinaryStringScanner;
 import com.acltabontabon.modscope.scan.FileCategory;
 import com.acltabontabon.modscope.scan.FileEntry;
 import com.acltabontabon.modscope.scan.FileInventoryScanner;
 import com.acltabontabon.modscope.scan.HintMatch;
+import com.acltabontabon.modscope.scan.PackageDefinitionAnalysis;
+import com.acltabontabon.modscope.scan.PackageDefinitionAnalyzer;
 import com.acltabontabon.modscope.scan.TextHintScanner;
 import com.acltabontabon.modscope.util.FileSizeFormatter;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -62,6 +71,12 @@ public class ScanService {
             }
         }
 
+        progress.onPhaseStarted("Inventorying save files");
+        List<SaveFileEntry> saveInventory = SaveInventoryScanner.inventory(saves);
+        if (!saveInventory.isEmpty()) {
+            progress.onLog("+ Save inventory: " + saveInventory.size() + " file(s)");
+        }
+
         progress.onPhaseStarted("Inventorying files");
         Path scanDir = install.map(GameInstall::installPath).orElse(options.gameDir());
         progress.onLog("Walking: " + scanDir);
@@ -93,6 +108,17 @@ public class ScanService {
         }
         progress.onLog("+ Inventory complete: " + files.size() + " files total");
 
+        progress.onPhaseStarted("Detecting engine");
+        EngineDetectionResult engineDetection = EngineDetector.detect(files);
+        if (engineDetection.isKnown()) {
+            progress.onLog("+ Engine: " + engineDetection.primary() + " (confidence " + engineDetection.confidence() + "%)");
+        } else {
+            progress.onLog("~ Engine: unknown");
+        }
+
+        progress.onPhaseStarted("Analyzing package definition");
+        PackageDefinitionAnalysis packageDefinition = analyzePackageDefinition(scanDir, files, progress);
+
         progress.onPhaseStarted("Scanning text/config hints");
         progress.onLog("Searching for QoL keywords in readable files...");
         List<HintMatch> hints = new ArrayList<>();
@@ -112,19 +138,67 @@ public class ScanService {
         }
         progress.onLog("+ Hint scan complete: " + hints.size() + " match(es)");
 
+        progress.onPhaseStarted("Binary string scanning");
+        List<BinaryStringHint> binaryHints = new ArrayList<>();
+        if (scanDir != null) {
+            binaryHints.addAll(BinaryStringScanner.scan(scanDir, files));
+            if (!binaryHints.isEmpty()) {
+                progress.onLog("* Binary string hints: " + binaryHints.size());
+            } else {
+                progress.onLog("~ No binary string hints found");
+            }
+        }
+
+        progress.onPhaseStarted("Calculating modding surface score");
+        // Build a partial result so ModdingSurfaceScore can inspect all collected data
+        ScanResult partial = new ScanResult(
+            install, saves, saveInventory, files, hints,
+            engineDetection, packageDefinition, binaryHints,
+            ModdingSurfaceScore.NONE, // placeholder
+            options.outputDir(), scannedAt, options
+        );
+        ModdingSurfaceScore surfaceScore = ModdingSurfaceScore.calculate(files, partial);
+        progress.onLog("+ Surface score: " + surfaceScore);
+
         progress.onPhaseStarted("Writing reports");
         Path outputDir = options.outputDir();
         progress.onLog("Writing reports to " + outputDir + " ...");
-        ScanResult result = new ScanResult(install, saves, files, hints, outputDir, scannedAt, options);
+
+        ScanResult result = new ScanResult(
+            install, saves, saveInventory, files, hints,
+            engineDetection, packageDefinition, binaryHints,
+            surfaceScore, outputDir, scannedAt, options
+        );
         ReportWriter.write(outputDir, result);
         progress.onLog("+ scan-summary.md");
         progress.onLog("+ file-inventory.json");
         progress.onLog("+ candidates.md");
         progress.onLog("+ text-hints.md");
         progress.onLog("+ save-locations.md");
+        progress.onLog("+ save-inventory.md");
+        if (packageDefinition.found()) progress.onLog("+ package-definition-analysis.md");
+        if (!binaryHints.isEmpty()) progress.onLog("+ binary-string-hints.md");
 
         progress.onComplete(result);
         return result;
+    }
+
+    private PackageDefinitionAnalysis analyzePackageDefinition(
+            Path scanDir, List<FileEntry> files, ScanProgressListener progress) {
+        if (scanDir == null) return PackageDefinitionAnalysis.notFound();
+
+        for (FileEntry entry : files) {
+            if (entry.category() == com.acltabontabon.modscope.scan.FileCategory.PACKAGE_DEFINITION) {
+                String sep = String.valueOf(scanDir.getFileSystem().getSeparator().charAt(0));
+                Path pkgFile = scanDir.resolve(entry.relativePath().replace('/', sep.charAt(0)));
+                if (Files.isRegularFile(pkgFile)) {
+                    PackageDefinitionAnalysis analysis = PackageDefinitionAnalyzer.analyze(pkgFile);
+                    progress.onLog("+ Package definition: " + analysis.chunkCount() + " chunk(s) — " + entry.relativePath());
+                    return analysis;
+                }
+            }
+        }
+        return PackageDefinitionAnalysis.notFound();
     }
 
     private Optional<GameInstall> detectInstall(ScanOptions options) {

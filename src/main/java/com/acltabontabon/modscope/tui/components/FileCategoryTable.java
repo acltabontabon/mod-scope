@@ -27,7 +27,7 @@ public final class FileCategoryTable {
             .collect(Collectors.groupingBy(FileEntry::category, Collectors.counting()));
 
         Line header = Line.from(
-            Span.styled(String.format("  %-18s %6s", "Category", "Files"), Style.EMPTY.addModifier(Modifier.BOLD))
+            Span.styled(String.format("  %-22s %6s", "Category", "Files"), Style.EMPTY.addModifier(Modifier.BOLD))
         );
 
         Line[] rows = new Line[FileCategory.values().length + 1];
@@ -38,11 +38,10 @@ public final class FileCategoryTable {
             if (count == 0) continue;
             Color color = colorFor(cat);
             rows[i++] = Line.from(
-                Span.styled(String.format("  %-18s %6d", cat.name(), count), Style.EMPTY.fg(color))
+                Span.styled(String.format("  %-22s %6d", cat.name(), count), Style.EMPTY.fg(color))
             );
         }
 
-        // Trim null rows
         int nonNull = 0;
         for (Line row : rows) if (row != null) nonNull++;
         Line[] trimmed = new Line[nonNull];
@@ -57,15 +56,19 @@ public final class FileCategoryTable {
 
     private static Color colorFor(FileCategory cat) {
         return switch (cat) {
-            case EXECUTABLE -> Color.RED;
-            case ARCHIVE -> Color.YELLOW;
-            case CONFIG -> Color.CYAN;
-            case TEXT -> Color.GREEN;
-            case VIDEO -> Color.MAGENTA;
-            case LOCALIZATION -> Color.BLUE;
-            case SHADER_CACHE -> Color.GRAY;
-            case UNKNOWN_LARGE -> Color.RED;
-            case OTHER -> Color.WHITE;
+            case GAME_EXECUTABLE  -> Color.RED;
+            case RUNTIME_LIBRARY  -> Color.RED;
+            case NVIDIA_LIBRARY   -> Color.GRAY;
+            case STEAM_LIBRARY    -> Color.GRAY;
+            case ARCHIVE          -> Color.YELLOW;
+            case PACKAGE_DEFINITION -> Color.CYAN;
+            case CONFIG           -> Color.CYAN;
+            case TEXT             -> Color.GREEN;
+            case VIDEO            -> Color.MAGENTA;
+            case LOCALIZATION     -> Color.BLUE;
+            case SHADER_CACHE     -> Color.GRAY;
+            case UNKNOWN_LARGE    -> Color.RED;
+            case OTHER            -> Color.WHITE;
         };
     }
 }

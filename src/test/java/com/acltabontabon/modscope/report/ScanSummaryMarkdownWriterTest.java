@@ -1,11 +1,14 @@
 package com.acltabontabon.modscope.report;
 
+import com.acltabontabon.modscope.core.ModdingSurfaceScore;
 import com.acltabontabon.modscope.core.ScanMode;
 import com.acltabontabon.modscope.core.ScanOptions;
 import com.acltabontabon.modscope.core.ScanResult;
+import com.acltabontabon.modscope.engine.EngineDetectionResult;
 import com.acltabontabon.modscope.scan.FileCategory;
 import com.acltabontabon.modscope.scan.FileEntry;
 import com.acltabontabon.modscope.scan.HintMatch;
+import com.acltabontabon.modscope.scan.PackageDefinitionAnalysis;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,13 +29,17 @@ class ScanSummaryMarkdownWriterTest {
     void writesScanSummaryFile() throws IOException {
         ScanOptions options = new ScanOptions("007-first-light", null, tempDir, ScanMode.STANDARD);
         List<FileEntry> files = List.of(
-            new FileEntry("Retail/Game.exe", FileCategory.EXECUTABLE, "exe", 1024, "2026-01-01T00:00:00Z", null, "exceeds hash limit"),
+            new FileEntry("Retail/Game.exe", FileCategory.GAME_EXECUTABLE, "exe", 1024, "2026-01-01T00:00:00Z", null, "exceeds hash limit"),
             new FileEntry("Config/settings.cfg", FileCategory.CONFIG, "cfg", 512, "2026-01-01T00:00:00Z", "abc123", null)
         );
         List<HintMatch> hints = List.of(
             new HintMatch("Config/settings.cfg", 3, "motionblur", "motionblur=true", HintMatch.Confidence.HIGH)
         );
-        ScanResult result = new ScanResult(Optional.empty(), List.of(), files, hints, tempDir, "2026-05-28T10:00:00Z", options);
+        ScanResult result = new ScanResult(
+            Optional.empty(), List.of(), List.of(), files, hints,
+            EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(), List.of(),
+            ModdingSurfaceScore.NONE, tempDir, "2026-05-28T10:00:00Z", options
+        );
 
         Path outFile = tempDir.resolve("scan-summary.md");
         ScanSummaryMarkdownWriter.write(outFile, result);
@@ -43,6 +50,24 @@ class ScanSummaryMarkdownWriterTest {
         assertTrue(content.contains("STANDARD"));
         assertTrue(content.contains("motionblur"));
         assertTrue(content.contains("READ-ONLY SCAN"));
-        assertTrue(content.contains("EXECUTABLE"));
+        assertTrue(content.contains("GAME_EXECUTABLE"));
+        assertTrue(content.contains("**Modding surface:** NONE"));
+    }
+
+    @Test
+    void includesEngineWhenDetected() throws IOException {
+        ScanOptions options = new ScanOptions(null, null, tempDir, ScanMode.STANDARD);
+        ScanResult result = new ScanResult(
+            Optional.empty(), List.of(), List.of(), List.of(), List.of(),
+            EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(), List.of(),
+            ModdingSurfaceScore.LOW, tempDir, "2026-05-28T10:00:00Z", options
+        );
+
+        Path outFile = tempDir.resolve("scan-summary.md");
+        ScanSummaryMarkdownWriter.write(outFile, result);
+
+        String content = Files.readString(outFile);
+        assertTrue(content.contains("Engine:"));
+        assertTrue(content.contains("**Modding surface:** LOW"));
     }
 }

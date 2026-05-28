@@ -32,7 +32,8 @@ public final class FileInventoryScanner {
         String extension = PathUtils.extensionOf(file);
         long size = SafeIo.fileSize(file);
         String lastModified = SafeIo.lastModified(file);
-        FileCategory category = FileClassifier.classify(extension, size);
+        String filename = file.getFileName().toString();
+        FileCategory category = FileClassifier.classify(filename, extension, size);
 
         long hashLimit = mode == ScanMode.DEEP ? Long.MAX_VALUE : Hashing.DEFAULT_HASH_LIMIT_BYTES;
         String sha256 = null;

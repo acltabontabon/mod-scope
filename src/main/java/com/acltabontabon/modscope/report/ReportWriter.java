@@ -17,5 +17,12 @@ public final class ReportWriter {
         CandidatesMarkdownWriter.write(outputDir.resolve("candidates.md"), result);
         TextHintsMarkdownWriter.write(outputDir.resolve("text-hints.md"), result);
         SaveLocationsMarkdownWriter.write(outputDir.resolve("save-locations.md"), result);
+        SaveInventoryMarkdownWriter.write(outputDir.resolve("save-inventory.md"), result);
+        if (result.packageDefinition().found()) {
+            PackageDefinitionMarkdownWriter.write(outputDir.resolve("package-definition-analysis.md"), result);
+        }
+        if (!result.binaryHints().isEmpty()) {
+            BinaryStringHintsMarkdownWriter.write(outputDir.resolve("binary-string-hints.md"), result);
+        }
     }
 }

@@ -1,8 +1,12 @@
 package com.acltabontabon.modscope.scan;
 
 public enum FileCategory {
-    EXECUTABLE,
+    GAME_EXECUTABLE,
+    RUNTIME_LIBRARY,
+    NVIDIA_LIBRARY,
+    STEAM_LIBRARY,
     ARCHIVE,
+    PACKAGE_DEFINITION,
     CONFIG,
     TEXT,
     VIDEO,

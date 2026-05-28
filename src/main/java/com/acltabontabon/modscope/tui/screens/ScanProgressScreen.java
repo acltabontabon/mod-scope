@@ -88,6 +88,7 @@ public final class ScanProgressScreen {
                 runner.runOnRenderThread(() -> {
                     state.scanResult = result;
                     state.hintsFound = result.hints().size();
+                    state.binaryHints = result.binaryHints().size();
                     state.filesScanned = result.files().size();
                     state.scanLog.add("Scan complete!");
                 });
@@ -127,11 +128,12 @@ public final class ScanProgressScreen {
         y++; // spacer
 
         // Counters
-        renderCounter(frame, inner, y++, "Files scanned", state.filesScanned, Color.WHITE);
-        renderCounter(frame, inner, y++, "Config-like",   state.configLike,   Color.CYAN);
-        renderCounter(frame, inner, y++, "Archives",      state.archives,     Color.YELLOW);
-        renderCounter(frame, inner, y++, "Videos",        state.videos,       Color.MAGENTA);
-        renderCounter(frame, inner, y++, "Hints found",   state.hintsFound,   Color.GREEN);
+        renderCounter(frame, inner, y++, "Files scanned",  state.filesScanned, Color.WHITE);
+        renderCounter(frame, inner, y++, "Config-like",    state.configLike,   Color.CYAN);
+        renderCounter(frame, inner, y++, "Archives",       state.archives,     Color.YELLOW);
+        renderCounter(frame, inner, y++, "Videos",         state.videos,       Color.MAGENTA);
+        renderCounter(frame, inner, y++, "Text hints",     state.hintsFound,   Color.GREEN);
+        renderCounter(frame, inner, y++, "Binary hints",   state.binaryHints,  Color.CYAN);
 
         y++; // spacer before log
 
