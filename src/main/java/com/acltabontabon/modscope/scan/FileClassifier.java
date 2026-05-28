@@ -12,6 +12,37 @@ public final class FileClassifier {
         "tier0_s.dll", "vstdlib_s.dll", "steam_emu.dll"
     );
 
+    // Direct3D, DXGI, Vulkan, and generic graphics runtimes
+    private static final Set<String> GRAPHICS_LIBRARY_NAMES = Set.of(
+        "d3d12core.dll", "d3d12.dll", "d3d11.dll", "d3d10.dll", "d3d9.dll",
+        "dxgi.dll", "dxcore.dll", "dxcompiler.dll", "vulkan-1.dll",
+        "opengl32.dll", "libgl.so", "libvulkan.so"
+    );
+    private static final Set<String> GRAPHICS_LIBRARY_PREFIXES = Set.of(
+        "d3dcompiler_", "d3dx12", "d3dx11", "d3dx9"
+    );
+
+    // NVIDIA Streamline overlay DLLs (sl.<feature>.dll)
+    private static final String STREAMLINE_PREFIX = "sl.";
+
+    // PhysX SDK DLLs
+    private static final Set<String> PHYSX_PREFIXES = Set.of(
+        "physx", "nvphysx", "pxfoundation", "pxpvdsdk", "pxcuda"
+    );
+
+    // DirectStorage runtime
+    private static final Set<String> DIRECTSTORAGE_NAMES = Set.of(
+        "dstorage.dll", "dstoragecore.dll", "directstorage.dll"
+    );
+
+    // MSVC/CRT system compat DLLs
+    private static final Set<String> SYSTEM_COMPAT_PREFIXES = Set.of(
+        "vcruntime", "msvcp", "msvcr", "ucrtbase", "concrt"
+    );
+    private static final Set<String> SYSTEM_COMPAT_NAMES = Set.of(
+        "msvcrt.dll", "ucrtbase.dll"
+    );
+
     private static final Set<String> ARCHIVE_EXTS = Set.of(
         "pak", "zip", "rar", "7z", "tar", "gz", "bz2", "xz",
         "arc", "bundle", "ba2", "bsa", "upk", "uasset",
@@ -49,17 +80,12 @@ public final class FileClassifier {
         String ext = extension.toLowerCase();
         String name = filename.toLowerCase();
 
-        // packagedefinition.txt is a Glacier engine chunk manifest
         if (name.equals("packagedefinition.txt")) return FileCategory.PACKAGE_DEFINITION;
 
         if (GAME_EXECUTABLE_EXTS.contains(ext)) return FileCategory.GAME_EXECUTABLE;
 
         if (LIBRARY_EXTS.contains(ext)) {
-            if (STEAM_LIBRARY_NAMES.contains(name)) return FileCategory.STEAM_LIBRARY;
-            if (name.startsWith("nv") || name.startsWith("cuda") || name.startsWith("nvapi")) {
-                return FileCategory.NVIDIA_LIBRARY;
-            }
-            return FileCategory.RUNTIME_LIBRARY;
+            return classifyLibrary(name);
         }
 
         if (ARCHIVE_EXTS.contains(ext)) return FileCategory.ARCHIVE;
@@ -72,15 +98,40 @@ public final class FileClassifier {
         return FileCategory.OTHER;
     }
 
+    private static FileCategory classifyLibrary(String name) {
+        // Check most specific first
+        if (STEAM_LIBRARY_NAMES.contains(name)) return FileCategory.STEAM_LIBRARY;
+        if (GRAPHICS_LIBRARY_NAMES.contains(name)) return FileCategory.GRAPHICS_LIBRARY;
+        for (String prefix : GRAPHICS_LIBRARY_PREFIXES) {
+            if (name.startsWith(prefix)) return FileCategory.GRAPHICS_LIBRARY;
+        }
+        if (DIRECTSTORAGE_NAMES.contains(name)) return FileCategory.DIRECTSTORAGE_LIBRARY;
+        if (name.startsWith(STREAMLINE_PREFIX)) return FileCategory.STREAMLINE_LIBRARY;
+        for (String prefix : PHYSX_PREFIXES) {
+            if (name.startsWith(prefix)) return FileCategory.PHYSX_LIBRARY;
+        }
+        // NVIDIA: nv* and cuda* (excluding nvphysx which is matched above)
+        if (name.startsWith("nv") || name.startsWith("cuda") || name.startsWith("nvapi")) {
+            return FileCategory.NVIDIA_LIBRARY;
+        }
+        if (SYSTEM_COMPAT_NAMES.contains(name)) return FileCategory.SYSTEM_COMPAT_LIBRARY;
+        for (String prefix : SYSTEM_COMPAT_PREFIXES) {
+            if (name.startsWith(prefix)) return FileCategory.SYSTEM_COMPAT_LIBRARY;
+        }
+        return FileCategory.RUNTIME_LIBRARY;
+    }
+
     public static boolean isTextReadable(String extension) {
         String ext = extension.toLowerCase();
         return CONFIG_EXTS.contains(ext) || TEXT_EXTS.contains(ext);
     }
 
-    public static boolean isBinaryScannable(FileCategory category) {
-        return category == FileCategory.ARCHIVE
-            || category == FileCategory.GAME_EXECUTABLE
-            || category == FileCategory.RUNTIME_LIBRARY
-            || category == FileCategory.UNKNOWN_LARGE;
+    public static boolean isVendorLibrary(FileCategory category) {
+        return switch (category) {
+            case RUNTIME_LIBRARY, NVIDIA_LIBRARY, STEAM_LIBRARY,
+                 GRAPHICS_LIBRARY, STREAMLINE_LIBRARY, PHYSX_LIBRARY,
+                 DIRECTSTORAGE_LIBRARY, SYSTEM_COMPAT_LIBRARY, VENDOR_LIBRARY -> true;
+            default -> false;
+        };
     }
 }

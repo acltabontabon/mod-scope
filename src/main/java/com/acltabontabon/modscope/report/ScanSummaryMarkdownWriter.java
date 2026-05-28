@@ -98,10 +98,19 @@ public final class ScanSummaryMarkdownWriter {
                 .forEach(e -> sb.append("- **").append(e.getKey()).append("**: found in ")
                     .append(e.getValue()).append(" match(es)\n"));
         }
-        if (!result.binaryHints().isEmpty()) {
+        if (!result.binaryScan().allHints().isEmpty()) {
             sb.append('\n');
-            sb.append("Binary string scanner found **").append(result.binaryHints().size())
-              .append("** QoL keyword hit(s) in binary/archive files. See `binary-string-hints.md`.\n");
+            int useful = result.binaryScan().usefulCount();
+            int suppressed = result.binaryScan().suppressedCount();
+            if (useful > 0) {
+                sb.append("Binary string scanner found **").append(useful)
+                  .append("** useful QoL keyword hit(s) in game files. See `binary-string-hints.md`.\n");
+            } else {
+                sb.append("Binary string scanning found no high-confidence game-specific QoL strings. ")
+                  .append(suppressed > 0 ? "Most matches (" + suppressed + ") were "
+                      + "vendor/runtime API noise and were suppressed. " : "")
+                  .append("See `binary-string-hints.md`.\n");
+            }
         }
         sb.append('\n');
 

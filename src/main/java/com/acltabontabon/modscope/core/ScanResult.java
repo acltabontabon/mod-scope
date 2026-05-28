@@ -4,7 +4,7 @@ import com.acltabontabon.modscope.engine.EngineDetectionResult;
 import com.acltabontabon.modscope.game.GameInstall;
 import com.acltabontabon.modscope.save.SaveCandidate;
 import com.acltabontabon.modscope.save.SaveFileEntry;
-import com.acltabontabon.modscope.scan.BinaryStringHint;
+import com.acltabontabon.modscope.scan.BinaryScanResult;
 import com.acltabontabon.modscope.scan.FileEntry;
 import com.acltabontabon.modscope.scan.HintMatch;
 import com.acltabontabon.modscope.scan.PackageDefinitionAnalysis;
@@ -21,7 +21,7 @@ public record ScanResult(
     List<HintMatch> hints,
     EngineDetectionResult engineDetection,
     PackageDefinitionAnalysis packageDefinition,
-    List<BinaryStringHint> binaryHints,
+    BinaryScanResult binaryScan,
     ModdingSurfaceScore surfaceScore,
     Path reportDir,
     String scannedAt,

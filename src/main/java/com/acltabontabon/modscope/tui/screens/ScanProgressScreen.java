@@ -88,7 +88,9 @@ public final class ScanProgressScreen {
                 runner.runOnRenderThread(() -> {
                     state.scanResult = result;
                     state.hintsFound = result.hints().size();
-                    state.binaryHints = result.binaryHints().size();
+                    state.binaryHintsTotal = result.binaryScan().allHints().size();
+                    state.binaryHintsUseful = result.binaryScan().usefulCount();
+                    state.binaryHintsSuppressed = result.binaryScan().suppressedCount();
                     state.filesScanned = result.files().size();
                     state.scanLog.add("Scan complete!");
                 });
@@ -128,12 +130,14 @@ public final class ScanProgressScreen {
         y++; // spacer
 
         // Counters
-        renderCounter(frame, inner, y++, "Files scanned",  state.filesScanned, Color.WHITE);
-        renderCounter(frame, inner, y++, "Config-like",    state.configLike,   Color.CYAN);
-        renderCounter(frame, inner, y++, "Archives",       state.archives,     Color.YELLOW);
-        renderCounter(frame, inner, y++, "Videos",         state.videos,       Color.MAGENTA);
-        renderCounter(frame, inner, y++, "Text hints",     state.hintsFound,   Color.GREEN);
-        renderCounter(frame, inner, y++, "Binary hints",   state.binaryHints,  Color.CYAN);
+        renderCounter(frame, inner, y++, "Files scanned",     state.filesScanned,        Color.WHITE);
+        renderCounter(frame, inner, y++, "Config-like",       state.configLike,          Color.CYAN);
+        renderCounter(frame, inner, y++, "Archives",          state.archives,            Color.YELLOW);
+        renderCounter(frame, inner, y++, "Videos",            state.videos,              Color.MAGENTA);
+        renderCounter(frame, inner, y++, "Text hints",        state.hintsFound,          Color.GREEN);
+        renderCounter(frame, inner, y++, "Binary hints (raw)", state.binaryHintsTotal,   Color.GRAY);
+        renderCounter(frame, inner, y++, "  Useful",          state.binaryHintsUseful,   Color.CYAN);
+        renderCounter(frame, inner, y++, "  Suppressed noise", state.binaryHintsSuppressed, Color.YELLOW);
 
         y++; // spacer before log
 

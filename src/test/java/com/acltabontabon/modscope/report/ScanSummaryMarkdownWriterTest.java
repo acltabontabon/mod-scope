@@ -5,6 +5,8 @@ import com.acltabontabon.modscope.core.ScanMode;
 import com.acltabontabon.modscope.core.ScanOptions;
 import com.acltabontabon.modscope.core.ScanResult;
 import com.acltabontabon.modscope.engine.EngineDetectionResult;
+import com.acltabontabon.modscope.scan.BinaryScanPolicy;
+import com.acltabontabon.modscope.scan.BinaryScanResult;
 import com.acltabontabon.modscope.scan.FileCategory;
 import com.acltabontabon.modscope.scan.FileEntry;
 import com.acltabontabon.modscope.scan.HintMatch;
@@ -27,7 +29,7 @@ class ScanSummaryMarkdownWriterTest {
 
     @Test
     void writesScanSummaryFile() throws IOException {
-        ScanOptions options = new ScanOptions("007-first-light", null, tempDir, ScanMode.STANDARD);
+        ScanOptions options = new ScanOptions("007-first-light", null, tempDir, ScanMode.STANDARD, BinaryScanPolicy.conservative());
         List<FileEntry> files = List.of(
             new FileEntry("Retail/Game.exe", FileCategory.GAME_EXECUTABLE, "exe", 1024, "2026-01-01T00:00:00Z", null, "exceeds hash limit"),
             new FileEntry("Config/settings.cfg", FileCategory.CONFIG, "cfg", 512, "2026-01-01T00:00:00Z", "abc123", null)
@@ -37,7 +39,8 @@ class ScanSummaryMarkdownWriterTest {
         );
         ScanResult result = new ScanResult(
             Optional.empty(), List.of(), List.of(), files, hints,
-            EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(), List.of(),
+            EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(),
+            BinaryScanResult.empty(BinaryScanPolicy.conservative()),
             ModdingSurfaceScore.NONE, tempDir, "2026-05-28T10:00:00Z", options
         );
 
@@ -56,10 +59,11 @@ class ScanSummaryMarkdownWriterTest {
 
     @Test
     void includesEngineWhenDetected() throws IOException {
-        ScanOptions options = new ScanOptions(null, null, tempDir, ScanMode.STANDARD);
+        ScanOptions options = new ScanOptions(null, null, tempDir, ScanMode.STANDARD, BinaryScanPolicy.conservative());
         ScanResult result = new ScanResult(
             Optional.empty(), List.of(), List.of(), List.of(), List.of(),
-            EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(), List.of(),
+            EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(),
+            BinaryScanResult.empty(BinaryScanPolicy.conservative()),
             ModdingSurfaceScore.LOW, tempDir, "2026-05-28T10:00:00Z", options
         );
 

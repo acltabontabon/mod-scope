@@ -56,19 +56,25 @@ public final class FileCategoryTable {
 
     private static Color colorFor(FileCategory cat) {
         return switch (cat) {
-            case GAME_EXECUTABLE  -> Color.RED;
-            case RUNTIME_LIBRARY  -> Color.RED;
-            case NVIDIA_LIBRARY   -> Color.GRAY;
-            case STEAM_LIBRARY    -> Color.GRAY;
-            case ARCHIVE          -> Color.YELLOW;
-            case PACKAGE_DEFINITION -> Color.CYAN;
-            case CONFIG           -> Color.CYAN;
-            case TEXT             -> Color.GREEN;
-            case VIDEO            -> Color.MAGENTA;
-            case LOCALIZATION     -> Color.BLUE;
-            case SHADER_CACHE     -> Color.GRAY;
-            case UNKNOWN_LARGE    -> Color.RED;
-            case OTHER            -> Color.WHITE;
+            case GAME_EXECUTABLE          -> Color.RED;
+            case RUNTIME_LIBRARY          -> Color.GRAY;
+            case NVIDIA_LIBRARY           -> Color.GRAY;
+            case STEAM_LIBRARY            -> Color.GRAY;
+            case GRAPHICS_LIBRARY         -> Color.GRAY;
+            case STREAMLINE_LIBRARY       -> Color.GRAY;
+            case PHYSX_LIBRARY            -> Color.GRAY;
+            case DIRECTSTORAGE_LIBRARY    -> Color.GRAY;
+            case SYSTEM_COMPAT_LIBRARY    -> Color.GRAY;
+            case VENDOR_LIBRARY           -> Color.GRAY;
+            case ARCHIVE                  -> Color.YELLOW;
+            case PACKAGE_DEFINITION       -> Color.CYAN;
+            case CONFIG                   -> Color.CYAN;
+            case TEXT                     -> Color.GREEN;
+            case VIDEO                    -> Color.MAGENTA;
+            case LOCALIZATION             -> Color.BLUE;
+            case SHADER_CACHE             -> Color.GRAY;
+            case UNKNOWN_LARGE            -> Color.RED;
+            case OTHER                    -> Color.WHITE;
         };
     }
 }

@@ -14,8 +14,58 @@ class FileClassifierTest {
 
     @Test
     void classifiesRuntimeLibrary() {
-        assertEquals(FileCategory.RUNTIME_LIBRARY, FileClassifier.classify("physx.dll", "dll", 512 * 1024));
+        assertEquals(FileCategory.RUNTIME_LIBRARY, FileClassifier.classify("something.dll", "dll", 512 * 1024));
         assertEquals(FileCategory.RUNTIME_LIBRARY, FileClassifier.classify("libsomething.so", "so", 1024));
+    }
+
+    @Test
+    void classifiesGraphicsLibrary() {
+        assertEquals(FileCategory.GRAPHICS_LIBRARY, FileClassifier.classify("D3D12Core.dll", "dll", 1024));
+        assertEquals(FileCategory.GRAPHICS_LIBRARY, FileClassifier.classify("dxgi.dll", "dll", 1024));
+        assertEquals(FileCategory.GRAPHICS_LIBRARY, FileClassifier.classify("vulkan-1.dll", "dll", 1024));
+        assertEquals(FileCategory.GRAPHICS_LIBRARY, FileClassifier.classify("d3dcompiler_47.dll", "dll", 1024));
+    }
+
+    @Test
+    void classifiesStreamlineLibrary() {
+        assertEquals(FileCategory.STREAMLINE_LIBRARY, FileClassifier.classify("sl.dlss.dll", "dll", 1024));
+        assertEquals(FileCategory.STREAMLINE_LIBRARY, FileClassifier.classify("sl.interposer.dll", "dll", 1024));
+    }
+
+    @Test
+    void classifiesPhysxLibrary() {
+        assertEquals(FileCategory.PHYSX_LIBRARY, FileClassifier.classify("PhysX_64.dll", "dll", 1024));
+        assertEquals(FileCategory.PHYSX_LIBRARY, FileClassifier.classify("nvPhysX.dll", "dll", 1024));
+        assertEquals(FileCategory.PHYSX_LIBRARY, FileClassifier.classify("PxFoundation_x64.dll", "dll", 1024));
+    }
+
+    @Test
+    void classifiesDirectStorageLibrary() {
+        assertEquals(FileCategory.DIRECTSTORAGE_LIBRARY, FileClassifier.classify("dstorage.dll", "dll", 1024));
+        assertEquals(FileCategory.DIRECTSTORAGE_LIBRARY, FileClassifier.classify("dstoragecore.dll", "dll", 1024));
+    }
+
+    @Test
+    void classifiesSystemCompatLibrary() {
+        assertEquals(FileCategory.SYSTEM_COMPAT_LIBRARY, FileClassifier.classify("vcruntime140.dll", "dll", 1024));
+        assertEquals(FileCategory.SYSTEM_COMPAT_LIBRARY, FileClassifier.classify("msvcp140.dll", "dll", 1024));
+        assertEquals(FileCategory.SYSTEM_COMPAT_LIBRARY, FileClassifier.classify("ucrtbase.dll", "dll", 1024));
+    }
+
+    @Test
+    void isVendorLibraryReturnsTrueForVendorCategories() {
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.RUNTIME_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.NVIDIA_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.STEAM_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.GRAPHICS_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.STREAMLINE_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.PHYSX_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.DIRECTSTORAGE_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.SYSTEM_COMPAT_LIBRARY));
+        assertTrue(FileClassifier.isVendorLibrary(FileCategory.VENDOR_LIBRARY));
+        assertFalse(FileClassifier.isVendorLibrary(FileCategory.ARCHIVE));
+        assertFalse(FileClassifier.isVendorLibrary(FileCategory.GAME_EXECUTABLE));
+        assertFalse(FileClassifier.isVendorLibrary(FileCategory.CONFIG));
     }
 
     @Test
@@ -84,12 +134,4 @@ class FileClassifierTest {
         assertFalse(FileClassifier.isTextReadable("exe"));
     }
 
-    @Test
-    void isBinaryScannableForArchivesAndExecutables() {
-        assertTrue(FileClassifier.isBinaryScannable(FileCategory.ARCHIVE));
-        assertTrue(FileClassifier.isBinaryScannable(FileCategory.GAME_EXECUTABLE));
-        assertTrue(FileClassifier.isBinaryScannable(FileCategory.RUNTIME_LIBRARY));
-        assertFalse(FileClassifier.isBinaryScannable(FileCategory.CONFIG));
-        assertFalse(FileClassifier.isBinaryScannable(FileCategory.VIDEO));
-    }
 }

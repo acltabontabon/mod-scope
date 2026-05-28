@@ -2,6 +2,7 @@ package com.acltabontabon.modscope.tui.screens;
 
 import com.acltabontabon.modscope.core.ScanMode;
 import com.acltabontabon.modscope.core.ScanOptions;
+import com.acltabontabon.modscope.scan.BinaryScanPolicy;
 import com.acltabontabon.modscope.tui.TuiScreen;
 import com.acltabontabon.modscope.tui.TuiState;
 import com.acltabontabon.modscope.tui.components.StatusPanel;
@@ -55,12 +56,15 @@ public final class ScanSetupScreen {
 
     private static boolean handleSelection(int index, TuiRunner runner, TuiState state) {
         switch (index) {
-            case 2 -> state.setupDeep = !state.setupDeep; // toggle deep
-            case 3 -> { // start scan
+            case 2 -> state.setupDeep = !state.setupDeep;
+            case 3 -> state.setupIncludeGameExe = !state.setupIncludeGameExe;
+            case 4 -> state.setupIncludeVendorLibs = !state.setupIncludeVendorLibs;
+            case 5 -> state.setupIncludeLargeArchives = !state.setupIncludeLargeArchives;
+            case 6 -> { // start scan
                 state.screen = TuiScreen.SCAN_PROGRESS;
                 ScanProgressScreen.startScan(state, runner);
             }
-            case 4 -> state.screen = TuiScreen.HOME; // back
+            case 7 -> state.screen = TuiScreen.HOME;
         }
         return true;
     }
@@ -69,9 +73,12 @@ public final class ScanSetupScreen {
         String profile = state.setupProfileId != null ? state.setupProfileId : "auto-detect";
         String gameDir = state.setupGameDir.isBlank() ? "(auto via Steam)" : state.setupGameDir;
         return new String[]{
-            "Profile:    " + profile,
-            "Directory:  " + gameDir,
-            "Deep scan:  " + (state.setupDeep ? "ON" : "OFF"),
+            "Profile:             " + profile,
+            "Directory:           " + gameDir,
+            "Deep scan:           " + (state.setupDeep ? "ON" : "OFF"),
+            "Binary: game exe:    " + (state.setupIncludeGameExe ? "ON" : "OFF"),
+            "Binary: vendor libs: " + (state.setupIncludeVendorLibs ? "ON" : "OFF"),
+            "Binary: large (>128MB) archives: " + (state.setupIncludeLargeArchives ? "ON" : "OFF"),
             "[ Start Scan ]",
             "[ Back ]"
         };
@@ -123,6 +130,11 @@ public final class ScanSetupScreen {
         Path gameDir = state.setupGameDir.isBlank() ? null : Path.of(state.setupGameDir);
         Path outputDir = Path.of(state.setupOutputDir);
         ScanMode mode = state.setupDeep ? ScanMode.DEEP : ScanMode.STANDARD;
-        return new ScanOptions(state.setupProfileId, gameDir, outputDir, mode);
+        BinaryScanPolicy binaryPolicy = new BinaryScanPolicy(
+            state.setupIncludeGameExe,
+            state.setupIncludeVendorLibs,
+            state.setupIncludeLargeArchives
+        );
+        return new ScanOptions(state.setupProfileId, gameDir, outputDir, mode, binaryPolicy);
     }
 }

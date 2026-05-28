@@ -29,6 +29,11 @@ public final class TuiState {
     public String setupOutputDir = ".modscope/reports";
     public static final String[] SETUP_PROFILES = { "007-first-light" };
 
+    // Scan setup — binary policy toggles
+    public boolean setupIncludeGameExe = false;
+    public boolean setupIncludeVendorLibs = false;
+    public boolean setupIncludeLargeArchives = false;
+
     // Scan progress
     public volatile String currentPhase = "Starting...";
     public volatile int filesScanned = 0;
@@ -36,7 +41,9 @@ public final class TuiState {
     public volatile int archives = 0;
     public volatile int videos = 0;
     public volatile int hintsFound = 0;
-    public volatile int binaryHints = 0;
+    public volatile int binaryHintsTotal = 0;
+    public volatile int binaryHintsUseful = 0;
+    public volatile int binaryHintsSuppressed = 0;
     public volatile boolean scanStarted = false;
     public final List<String> scanLog = new ArrayList<>();
 

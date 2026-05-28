@@ -11,7 +11,7 @@ import com.acltabontabon.modscope.save.SaveCandidate;
 import com.acltabontabon.modscope.save.SaveFileEntry;
 import com.acltabontabon.modscope.save.SaveInventoryScanner;
 import com.acltabontabon.modscope.save.SaveLocator;
-import com.acltabontabon.modscope.scan.BinaryStringHint;
+import com.acltabontabon.modscope.scan.BinaryScanResult;
 import com.acltabontabon.modscope.scan.BinaryStringScanner;
 import com.acltabontabon.modscope.scan.FileCategory;
 import com.acltabontabon.modscope.scan.FileEntry;
@@ -37,8 +37,7 @@ public class ScanService {
 
     public ScanResult scan(ScanOptions options, ScanProgressListener listener) throws IOException {
         final ScanProgressListener progress = listener != null ? listener : ScanProgressListener.silent();
-
-        String scannedAt = Instant.now().toString();
+        final String scannedAt = Instant.now().toString();
 
         progress.onPhaseStarted("Detecting game");
         progress.onLog("Looking for game installation...");
@@ -53,9 +52,7 @@ public class ScanService {
             () -> progress.onLog("~ Game not found via Steam, using manual path")
         );
 
-        GameProfile profile = install
-            .map(GameInstall::profile)
-            .orElseGet(() -> resolveProfile(options));
+        GameProfile profile = install.map(GameInstall::profile).orElseGet(() -> resolveProfile(options));
 
         progress.onPhaseStarted("Locating saves");
         progress.onLog("Searching Steam userdata for save candidates...");
@@ -99,8 +96,7 @@ public class ScanService {
                 if (milestone > lastLoggedMilestone[0]) {
                     lastLoggedMilestone[0] = milestone;
                     progress.onLog("  " + total[0] + " files scanned — "
-                        + configLike.get() + " configs, "
-                        + archives.get() + " archives, "
+                        + configLike.get() + " configs, " + archives.get() + " archives, "
                         + videos.get() + " videos");
                 }
                 progress.onProgress(total[0], configLike.get(), archives.get(), videos.get(), 0);
@@ -111,7 +107,8 @@ public class ScanService {
         progress.onPhaseStarted("Detecting engine");
         EngineDetectionResult engineDetection = EngineDetector.detect(files);
         if (engineDetection.isKnown()) {
-            progress.onLog("+ Engine: " + engineDetection.primary() + " (confidence " + engineDetection.confidence() + "%)");
+            progress.onLog("+ Engine: " + engineDetection.primary()
+                + " (confidence " + engineDetection.confidence() + "%)");
         } else {
             progress.onLog("~ Engine: unknown");
         }
@@ -124,9 +121,9 @@ public class ScanService {
         List<HintMatch> hints = new ArrayList<>();
         for (FileEntry entry : files) {
             if (scanDir != null) {
-                String sep = String.valueOf(scanDir.getFileSystem().getSeparator().charAt(0));
+                char sep = scanDir.getFileSystem().getSeparator().charAt(0);
                 List<HintMatch> fileHints = TextHintScanner.scan(
-                    scanDir.resolve(entry.relativePath().replace('/', sep.charAt(0))),
+                    scanDir.resolve(entry.relativePath().replace('/', sep)),
                     entry.extension()
                 );
                 if (!fileHints.isEmpty()) {
@@ -139,23 +136,23 @@ public class ScanService {
         progress.onLog("+ Hint scan complete: " + hints.size() + " match(es)");
 
         progress.onPhaseStarted("Binary string scanning");
-        List<BinaryStringHint> binaryHints = new ArrayList<>();
+        BinaryScanResult binaryScan;
         if (scanDir != null) {
-            binaryHints.addAll(BinaryStringScanner.scan(scanDir, files));
-            if (!binaryHints.isEmpty()) {
-                progress.onLog("* Binary string hints: " + binaryHints.size());
-            } else {
-                progress.onLog("~ No binary string hints found");
-            }
+            binaryScan = BinaryStringScanner.scan(scanDir, files, options.binaryScan());
+            progress.onLog("* Binary scan: " + binaryScan.filesScanned() + " files, "
+                + binaryScan.usefulCount() + " useful hints, "
+                + binaryScan.suppressedCount() + " suppressed as noise"
+                + " (policy: " + options.binaryScan().description() + ")");
+        } else {
+            binaryScan = BinaryScanResult.empty(options.binaryScan());
         }
 
         progress.onPhaseStarted("Calculating modding surface score");
-        // Build a partial result so ModdingSurfaceScore can inspect all collected data
+        // Build a partial result for scoring
         ScanResult partial = new ScanResult(
             install, saves, saveInventory, files, hints,
-            engineDetection, packageDefinition, binaryHints,
-            ModdingSurfaceScore.NONE, // placeholder
-            options.outputDir(), scannedAt, options
+            engineDetection, packageDefinition, binaryScan,
+            ModdingSurfaceScore.NONE, options.outputDir(), scannedAt, options
         );
         ModdingSurfaceScore surfaceScore = ModdingSurfaceScore.calculate(files, partial);
         progress.onLog("+ Surface score: " + surfaceScore);
@@ -166,7 +163,7 @@ public class ScanService {
 
         ScanResult result = new ScanResult(
             install, saves, saveInventory, files, hints,
-            engineDetection, packageDefinition, binaryHints,
+            engineDetection, packageDefinition, binaryScan,
             surfaceScore, outputDir, scannedAt, options
         );
         ReportWriter.write(outputDir, result);
@@ -177,7 +174,7 @@ public class ScanService {
         progress.onLog("+ save-locations.md");
         progress.onLog("+ save-inventory.md");
         if (packageDefinition.found()) progress.onLog("+ package-definition-analysis.md");
-        if (!binaryHints.isEmpty()) progress.onLog("+ binary-string-hints.md");
+        if (!binaryScan.allHints().isEmpty()) progress.onLog("+ binary-string-hints.md");
 
         progress.onComplete(result);
         return result;
@@ -186,14 +183,14 @@ public class ScanService {
     private PackageDefinitionAnalysis analyzePackageDefinition(
             Path scanDir, List<FileEntry> files, ScanProgressListener progress) {
         if (scanDir == null) return PackageDefinitionAnalysis.notFound();
-
         for (FileEntry entry : files) {
-            if (entry.category() == com.acltabontabon.modscope.scan.FileCategory.PACKAGE_DEFINITION) {
-                String sep = String.valueOf(scanDir.getFileSystem().getSeparator().charAt(0));
-                Path pkgFile = scanDir.resolve(entry.relativePath().replace('/', sep.charAt(0)));
+            if (entry.category() == FileCategory.PACKAGE_DEFINITION) {
+                char sep = scanDir.getFileSystem().getSeparator().charAt(0);
+                Path pkgFile = scanDir.resolve(entry.relativePath().replace('/', sep));
                 if (Files.isRegularFile(pkgFile)) {
                     PackageDefinitionAnalysis analysis = PackageDefinitionAnalyzer.analyze(pkgFile);
-                    progress.onLog("+ Package definition: " + analysis.chunkCount() + " chunk(s) — " + entry.relativePath());
+                    progress.onLog("+ Package definition: " + analysis.chunkCount()
+                        + " chunk(s) — " + entry.relativePath());
                     return analysis;
                 }
             }
@@ -203,9 +200,7 @@ public class ScanService {
 
     private Optional<GameInstall> detectInstall(ScanOptions options) {
         GameProfile profile = resolveProfile(options);
-        if (profile == null) {
-            profile = GameProfileRegistry.all().stream().findFirst().orElse(null);
-        }
+        if (profile == null) profile = GameProfileRegistry.all().stream().findFirst().orElse(null);
         if (profile == null) return Optional.empty();
         return GameInstallDetector.detect(profile, options);
     }

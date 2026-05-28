@@ -166,12 +166,25 @@ public final class ScanResultsScreen {
             ));
         }
 
-        // Binary hints
-        int binCount = result.binaryHints().size();
+        // Binary hints — show useful vs. suppressed
+        int binUseful = result.binaryScan().usefulCount();
+        int binSuppressed = result.binaryScan().suppressedCount();
+        int binTotal = result.binaryScan().allHints().size();
+        String binLabel;
+        Color binColor;
+        if (binTotal == 0) {
+            binLabel = "none";
+            binColor = Color.YELLOW;
+        } else if (binUseful == 0) {
+            binLabel = "0 useful (" + binSuppressed + " vendor/runtime noise suppressed)";
+            binColor = Color.YELLOW;
+        } else {
+            binLabel = binUseful + " useful / " + binTotal + " raw (" + binSuppressed + " suppressed)";
+            binColor = Color.GREEN;
+        }
         lines.add(Line.from(
             Span.styled("  BinHints:  ", Style.EMPTY.fg(Color.GRAY)),
-            Span.styled(binCount > 0 ? binCount + " QoL keyword(s) in archives" : "none",
-                Style.EMPTY.fg(binCount > 0 ? Color.GREEN : Color.YELLOW))
+            Span.styled(binLabel, Style.EMPTY.fg(binColor))
         ));
 
         // Save inventory

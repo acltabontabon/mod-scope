@@ -21,7 +21,7 @@ public final class ReportWriter {
         if (result.packageDefinition().found()) {
             PackageDefinitionMarkdownWriter.write(outputDir.resolve("package-definition-analysis.md"), result);
         }
-        if (!result.binaryHints().isEmpty()) {
+        if (!result.binaryScan().allHints().isEmpty()) {
             BinaryStringHintsMarkdownWriter.write(outputDir.resolve("binary-string-hints.md"), result);
         }
     }

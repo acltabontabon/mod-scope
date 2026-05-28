@@ -12,10 +12,7 @@ public enum ModdingSurfaceScore {
     MEDIUM,
     HIGH;
 
-    public static ModdingSurfaceScore calculate(
-            List<FileEntry> files,
-            ScanResult result
-    ) {
+    public static ModdingSurfaceScore calculate(List<FileEntry> files, ScanResult result) {
         long total = files.size();
         if (total == 0) return NONE;
 
@@ -23,15 +20,13 @@ public enum ModdingSurfaceScore {
         long configs = files.stream().filter(f ->
             f.category() == FileCategory.CONFIG || f.category() == FileCategory.TEXT).count();
 
-        double archiveRatio = total > 0 ? (double) archives / total : 0.0;
-
-        // Start with a numeric level: 0=NONE, 1=LOW, 2=MEDIUM, 3=HIGH
+        double archiveRatio = (double) archives / total;
         int level = 0;
 
-        // Archive-heavy game (>60% archives) gets at least LOW
+        // Archive-heavy game (>60% archives) — at least LOW
         if (archiveRatio > 0.6 && archives > 5) level = Math.max(level, 1);
 
-        // Known engine with documented modding toolchain bumps to MEDIUM
+        // Known engine with documented modding toolchain
         if (result.engineDetection().isKnown()) {
             EngineFamily family = result.engineDetection().primary();
             if (family == EngineFamily.UNREAL || family == EngineFamily.CREATION
@@ -46,15 +41,16 @@ public enum ModdingSurfaceScore {
         if (configs >= 10) level = Math.max(level, 2);
         if (configs >= 30) level = Math.max(level, 3);
 
-        // QoL hints reinforce the score
+        // QoL hints in readable text files
         if (!result.hints().isEmpty()) level = Math.max(level, 2);
 
-        // PackageDefinition present = structured chunk manifest → modder can target specific chunks
+        // PackageDefinition present = structured chunk manifest
         if (result.packageDefinition().found()) level = Math.max(level, 2);
 
-        // Binary string hits in archives suggest readable strings/paths inside
-        if (result.binaryHints().size() >= 5) level = Math.max(level, 2);
-        if (result.binaryHints().size() >= 20) level = Math.max(level, 3);
+        // Only use USEFUL binary hints (vendor noise excluded)
+        int usefulBinary = result.binaryScan().usefulCount();
+        if (usefulBinary >= 5) level = Math.max(level, 2);
+        if (usefulBinary >= 20) level = Math.max(level, 3);
 
         return values()[level];
     }
