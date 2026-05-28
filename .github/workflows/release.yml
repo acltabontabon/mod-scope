@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    branches: ['**']
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  native-macos:
+    name: Native image (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest   # macOS 14, Apple Silicon (arm64)
+            arch: arm64
+          - os: macos-13       # macOS 13, Intel (x86_64)
+            arch: x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up GraalVM with native-image
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          cache: 'maven'
+
+      - name: Set pom.xml to release version
+        if: github.event_name == 'release'
+        run: |
+          chmod +x ./mvnw
+          ./mvnw --no-transfer-progress \
+            versions:set \
+            -DnewVersion=${{ steps.version.outputs.version }} \
+            -DgenerateBackupPoms=false
+
+      - name: Build native image
+        run: |
+          chmod +x ./mvnw
+          ./mvnw --no-transfer-progress \
+            -Pnative native:compile \
+            -DskipTests
+
+      - name: Package binary
+        id: package
+        run: |
+          ARCHIVE="modscope-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.tar.gz"
+          tar -czf "target/$ARCHIVE" -C target modscope
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/${{ steps.package.outputs.archive }}
+
+      - name: Upload as build artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: modscope-macos-${{ matrix.arch }}
+          path: target/${{ steps.package.outputs.archive }}
+          retention-days: 7
+
+  bump-version:
+    name: Bump to next snapshot
+    if: github.event_name == 'release'
+    needs: native-macos
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute next snapshot version
+        id: next
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          echo "version=${major}.$((minor + 1)).0-SNAPSHOT" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Bump pom.xml to ${{ steps.next.outputs.version }}
+        run: |
+          chmod +x ./mvnw
+          ./mvnw --no-transfer-progress \
+            versions:set \
+            -DnewVersion=${{ steps.next.outputs.version }} \
+            -DgenerateBackupPoms=false
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pom.xml
+          git commit -m "chore: bump version to ${{ steps.next.outputs.version }} [skip ci]"
+          git push
