@@ -1,0 +1,9 @@
+{
+  "resources": {
+    "includes": [
+      { "pattern": "standard\\.properties" },
+      { "pattern": "dev/tamboui/.*\\.properties" },
+      { "pattern": "dev/tamboui/.*\\.json" }
+    ]
+  }
+}
