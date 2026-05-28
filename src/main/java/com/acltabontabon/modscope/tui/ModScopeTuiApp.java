@@ -5,6 +5,8 @@ import com.acltabontabon.modscope.tui.screens.HomeScreen;
 import com.acltabontabon.modscope.tui.screens.ScanProgressScreen;
 import com.acltabontabon.modscope.tui.screens.ScanResultsScreen;
 import com.acltabontabon.modscope.tui.screens.ScanSetupScreen;
+import dev.tamboui.backend.panama.PanamaBackend;
+import dev.tamboui.terminal.Backend;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.TuiRunner;
 import dev.tamboui.tui.event.KeyEvent;
@@ -24,6 +26,14 @@ public class ModScopeTuiApp implements ApplicationRunner {
         this.scanService = scanService;
     }
 
+    private static Backend createBackend() throws Exception {
+        var backend = new PanamaBackend();
+        if (System.getProperty("os.name", "").toLowerCase().startsWith("windows")) {
+            return new WindowsPeekFixingBackend(backend);
+        }
+        return backend;
+    }
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         TuiState state = new TuiState();
@@ -31,6 +41,7 @@ public class ModScopeTuiApp implements ApplicationRunner {
 
         TuiConfig config = TuiConfig.builder()
             .tickRate(Duration.ofMillis(250))
+            .backend(createBackend())
             .build();
 
         try (TuiRunner tui = TuiRunner.create(config)) {
