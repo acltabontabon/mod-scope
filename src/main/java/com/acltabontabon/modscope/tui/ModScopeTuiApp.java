@@ -1,7 +1,12 @@
 package com.acltabontabon.modscope.tui;
 
 import com.acltabontabon.modscope.core.ScanService;
-import com.acltabontabon.modscope.game.GameInstallDetector;
+import com.acltabontabon.modscope.game.GameProfileRegistry;
+import com.acltabontabon.modscope.steam.SteamLibraryScanner;
+import com.acltabontabon.modscope.steam.SteamLocator;
+
+import java.util.Comparator;
+import java.util.List;
 import com.acltabontabon.modscope.tui.screens.HomeScreen;
 import com.acltabontabon.modscope.tui.screens.ScanProgressScreen;
 import com.acltabontabon.modscope.tui.screens.ScanResultsScreen;
@@ -39,7 +44,15 @@ public class ModScopeTuiApp implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         TuiState state = new TuiState();
         state.scanService = scanService;
-        state.detectedGames = GameInstallDetector.detectAllInstalled();
+        state.detectedManifests = SteamLocator.findSteamRoot()
+            .map(root -> SteamLibraryScanner.allManifests(SteamLibraryScanner.findLibraryFolders(root)))
+            .orElse(List.of())
+            .stream()
+            .filter(m -> !m.name().isBlank())
+            .sorted(Comparator.<com.acltabontabon.modscope.steam.SteamAppManifest, Integer>comparing(
+                    m -> GameProfileRegistry.findByAppId(m.appId()).isPresent() ? 0 : 1)
+                .thenComparing(m -> m.name().toLowerCase()))
+            .toList();
 
         TuiConfig config = TuiConfig.builder()
             .tickRate(Duration.ofMillis(250))

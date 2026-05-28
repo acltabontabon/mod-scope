@@ -70,25 +70,33 @@ public final class ScanSetupScreen {
     }
 
     private static String[] buildItems(TuiState state) {
-        String profile = state.setupProfileId != null ? state.setupProfileId : "auto-detect";
-        String gameDir = state.setupGameDir.isBlank() ? "(auto via Steam)" : state.setupGameDir;
+        String gameDisplay = state.setupGameDir.isBlank() ? "(choose folder)" : shorten(state.setupGameDir, 48);
+        String profileDisplay = state.setupProfileId != null ? state.setupProfileId : "generic (no profile)";
         return new String[]{
-            "Profile:             " + profile,
-            "Directory:           " + gameDir,
-            "Deep scan:           " + (state.setupDeep ? "ON" : "OFF"),
-            "Binary: game exe:    " + (state.setupIncludeGameExe ? "ON" : "OFF"),
-            "Binary: vendor libs: " + (state.setupIncludeVendorLibs ? "ON" : "OFF"),
-            "Binary: large (>128MB) archives: " + (state.setupIncludeLargeArchives ? "ON" : "OFF"),
+            "Directory:                " + gameDisplay,
+            "Profile:                  " + profileDisplay,
+            "Deep scan:                " + (state.setupDeep ? "ON" : "OFF"),
+            "Binary: game exe:         " + (state.setupIncludeGameExe ? "ON" : "OFF"),
+            "Binary: vendor libs:      " + (state.setupIncludeVendorLibs ? "ON" : "OFF"),
+            "Binary: large archives:   " + (state.setupIncludeLargeArchives ? "ON" : "OFF"),
             "[ Start Scan ]",
             "[ Back ]"
         };
     }
 
+    private static String shorten(String s, int max) {
+        if (s.length() <= max) return s;
+        return "..." + s.substring(s.length() - Math.max(0, max - 3));
+    }
+
     public static void render(Frame frame, TuiState state) {
         Rect area = frame.area();
 
+        String titleText = state.setupGameName.isBlank()
+            ? " Scan Setup "
+            : " Scan Setup — " + state.setupGameName + " ";
         Block outerBlock = Block.builder()
-            .title(Title.from(" Scan Setup "))
+            .title(Title.from(titleText))
             .borders(Borders.ALL)
             .borderType(BorderType.ROUNDED)
             .build();

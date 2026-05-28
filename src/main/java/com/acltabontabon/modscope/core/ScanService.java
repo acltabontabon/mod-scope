@@ -49,7 +49,7 @@ public class ScanService {
 
         install.ifPresentOrElse(
             i -> progress.onLog("+ Found: " + i.profile().displayName() + " at " + i.installPath()),
-            () -> progress.onLog("~ Game not found via Steam, using manual path")
+            () -> progress.onLog("~ No matching profile — scanning directory as generic game")
         );
 
         GameProfile profile = install.map(GameInstall::profile).orElseGet(() -> resolveProfile(options));
@@ -200,7 +200,6 @@ public class ScanService {
 
     private Optional<GameInstall> detectInstall(ScanOptions options) {
         GameProfile profile = resolveProfile(options);
-        if (profile == null) profile = GameProfileRegistry.all().stream().findFirst().orElse(null);
         if (profile == null) return Optional.empty();
         return GameInstallDetector.detect(profile, options);
     }

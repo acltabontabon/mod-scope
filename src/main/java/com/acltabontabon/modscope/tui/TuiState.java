@@ -2,7 +2,7 @@ package com.acltabontabon.modscope.tui;
 
 import com.acltabontabon.modscope.core.ScanResult;
 import com.acltabontabon.modscope.core.ScanService;
-import com.acltabontabon.modscope.game.GameInstall;
+import com.acltabontabon.modscope.steam.SteamAppManifest;
 import dev.tamboui.widgets.list.ListState;
 
 import java.util.ArrayList;
@@ -12,17 +12,17 @@ public final class TuiState {
 
     public TuiScreen screen = TuiScreen.HOME;
 
-    // Home screen — detected installs populated at startup
+    // Home screen — all installed Steam games, populated at startup
     public final ListState homeList = new ListState();
-    public List<GameInstall> detectedGames = List.of();
+    public List<SteamAppManifest> detectedManifests = List.of();
 
     // Scan setup
     public final ListState setupList = new ListState();
-    public String setupProfileId = "007-first-light";
+    public String setupProfileId = null;
     public String setupGameDir = "";
+    public String setupGameName = "";
     public boolean setupDeep = false;
     public String setupOutputDir = ".modscope/reports";
-    public static final String[] SETUP_PROFILES = { "007-first-light" };
 
     // Scan setup — binary policy toggles
     public boolean setupIncludeGameExe = false;

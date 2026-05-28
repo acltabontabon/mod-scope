@@ -1,6 +1,7 @@
 package com.acltabontabon.modscope.tui.screens;
 
-import com.acltabontabon.modscope.game.GameInstall;
+import com.acltabontabon.modscope.game.GameProfileRegistry;
+import com.acltabontabon.modscope.steam.SteamAppManifest;
 import com.acltabontabon.modscope.tui.TuiScreen;
 import com.acltabontabon.modscope.tui.TuiState;
 import com.acltabontabon.modscope.tui.components.StatusPanel;
@@ -27,13 +28,15 @@ import java.util.List;
 
 public final class HomeScreen {
 
+    private static final int TAIL_ITEMS = 2; // "Scan folder manually" + "Exit"
+
     private HomeScreen() {}
 
     public static boolean handleKey(KeyEvent event, TuiRunner runner, TuiState state) {
-        String[] items = buildMenuItems(state);
+        int total = state.detectedManifests.size() + TAIL_ITEMS;
         return switch (event) {
             case KeyEvent k when k.isDown() -> {
-                state.homeList.selectNext(items.length);
+                state.homeList.selectNext(total);
                 yield true;
             }
             case KeyEvent k when k.isUp() -> {
@@ -41,8 +44,8 @@ public final class HomeScreen {
                 yield true;
             }
             case KeyEvent k when k.isSelect() -> {
-                int selected = state.homeList.selected() != null ? state.homeList.selected() : 0;
-                yield handleSelection(selected, runner, state);
+                int sel = state.homeList.selected() != null ? state.homeList.selected() : 0;
+                yield handleSelection(sel, runner, state);
             }
             case KeyEvent k when k.isQuit() -> {
                 runner.quit();
@@ -53,37 +56,44 @@ public final class HomeScreen {
     }
 
     private static boolean handleSelection(int index, TuiRunner runner, TuiState state) {
-        List<GameInstall> games = state.detectedGames;
-        if (index < games.size()) {
-            // Selected a detected game
-            state.setupProfileId = games.get(index).profile().id();
-            state.setupGameDir = games.get(index).installPath().toString();
+        List<SteamAppManifest> manifests = state.detectedManifests;
+        if (index < manifests.size()) {
+            SteamAppManifest manifest = manifests.get(index);
+            state.setupGameName = manifest.name();
+            state.setupGameDir = manifest.resolvedInstallPath().toString();
+            state.setupProfileId = GameProfileRegistry.findByAppId(manifest.appId())
+                .map(p -> p.id()).orElse(null);
+            resetScanState(state);
             state.screen = TuiScreen.SCAN_SETUP;
         } else {
-            int tail = index - games.size();
-            switch (tail) {
-                case 0 -> { // Scan folder manually
-                    state.setupProfileId = null;
-                    state.setupGameDir = "";
-                    state.screen = TuiScreen.SCAN_SETUP;
-                }
-                case 1 -> runner.quit(); // Exit
+            int tail = index - manifests.size();
+            if (tail == 0) { // Scan folder manually
+                state.setupGameName = "";
+                state.setupGameDir = "";
+                state.setupProfileId = null;
+                resetScanState(state);
+                state.screen = TuiScreen.SCAN_SETUP;
+            } else { // Exit
+                runner.quit();
             }
         }
         return true;
     }
 
-    static String[] buildMenuItems(TuiState state) {
-        List<GameInstall> games = state.detectedGames;
-        String[] items = new String[games.size() + 2];
-        for (int i = 0; i < games.size(); i++) {
-            GameInstall g = games.get(i);
-            items[i] = "Scan " + g.profile().displayName();
-        }
-        int tail = games.size();
-        items[tail]     = games.isEmpty() ? "Scan game folder manually" : "Scan a different folder";
-        items[tail + 1] = "Exit";
-        return items;
+    private static void resetScanState(TuiState state) {
+        state.scanStarted = false;
+        state.scanResult = null;
+        state.scanError = null;
+        state.scanLog.clear();
+        state.currentPhase = "Starting...";
+        state.filesScanned = 0;
+        state.configLike = 0;
+        state.archives = 0;
+        state.videos = 0;
+        state.hintsFound = 0;
+        state.binaryHintsTotal = 0;
+        state.binaryHintsUseful = 0;
+        state.binaryHintsSuppressed = 0;
     }
 
     public static void render(Frame frame, TuiState state) {
@@ -99,7 +109,6 @@ public final class HomeScreen {
 
         int y = inner.y();
 
-        // Tagline
         frame.renderWidget(
             Paragraph.builder()
                 .text(Text.from(Line.from(
@@ -108,8 +117,6 @@ public final class HomeScreen {
                 .build(),
             Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
         );
-
-        // Safety note
         frame.renderWidget(
             Paragraph.builder()
                 .text(Text.from(Line.from(
@@ -119,27 +126,45 @@ public final class HomeScreen {
             Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
         );
 
-        // Detection status line
-        String detectionLine = state.detectedGames.isEmpty()
-            ? "  No supported Steam games detected."
-            : "  " + state.detectedGames.size() + " supported game(s) detected via Steam:";
-        frame.renderWidget(
-            Paragraph.builder()
-                .text(Text.from(Line.from(
-                    Span.styled(detectionLine, Style.EMPTY.fg(Color.CYAN))
-                )))
-                .build(),
-            Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
-        );
+        y++; // spacer
 
-        y++; // spacer before menu
+        List<SteamAppManifest> manifests = state.detectedManifests;
+        if (manifests.isEmpty()) {
+            frame.renderWidget(
+                Paragraph.builder()
+                    .text(Text.from(Line.from(
+                        Span.styled("  Steam not found or no games installed.", Style.EMPTY.fg(Color.YELLOW))
+                    )))
+                    .build(),
+                Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
+            );
+        } else {
+            long knownCount = manifests.stream()
+                .filter(m -> GameProfileRegistry.findByAppId(m.appId()).isPresent())
+                .count();
+            String statusLine = "  " + manifests.size() + " game(s) installed";
+            if (knownCount > 0) {
+                statusLine += "  ·  " + knownCount + " with full profile support";
+            }
+            frame.renderWidget(
+                Paragraph.builder()
+                    .text(Text.from(Line.from(
+                        Span.styled(statusLine, Style.EMPTY.fg(Color.CYAN))
+                    )))
+                    .build(),
+                Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
+            );
+        }
+
+        y++; // spacer before list
 
         int listHeight = inner.height() - (y - inner.y()) - 2;
         if (listHeight > 0) {
+            String[] items = buildMenuItems(state);
             Rect listArea = Rect.of(new Position(inner.x(), y), new Size(inner.width(), listHeight));
             frame.renderStatefulWidget(
                 ListWidget.builder()
-                    .items(buildMenuItems(state))
+                    .items(items)
                     .highlightStyle(Style.EMPTY.fg(Color.CYAN).addModifier(Modifier.BOLD))
                     .highlightSymbol("▶ ")
                     .build(),
@@ -149,5 +174,21 @@ public final class HomeScreen {
         }
 
         StatusPanel.render(frame, inner, "↑↓ navigate   Enter select   q quit");
+    }
+
+    static String[] buildMenuItems(TuiState state) {
+        List<SteamAppManifest> manifests = state.detectedManifests;
+        String[] items = new String[manifests.size() + TAIL_ITEMS];
+        for (int i = 0; i < manifests.size(); i++) {
+            SteamAppManifest m = manifests.get(i);
+            boolean known = GameProfileRegistry.findByAppId(m.appId()).isPresent();
+            items[i] = known
+                ? String.format("  %-48s [+]", m.name())
+                : "  " + m.name();
+        }
+        int tail = manifests.size();
+        items[tail]     = manifests.isEmpty() ? "  Scan game folder manually" : "  Scan a different folder";
+        items[tail + 1] = "  Exit";
+        return items;
     }
 }
