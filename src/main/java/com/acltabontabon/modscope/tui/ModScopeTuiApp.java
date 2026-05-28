@@ -1,6 +1,7 @@
 package com.acltabontabon.modscope.tui;
 
 import com.acltabontabon.modscope.core.ScanService;
+import com.acltabontabon.modscope.util.WindowsConsoleInit;
 import com.acltabontabon.modscope.tui.screens.HomeScreen;
 import com.acltabontabon.modscope.tui.screens.ScanProgressScreen;
 import com.acltabontabon.modscope.tui.screens.ScanResultsScreen;
@@ -26,11 +27,10 @@ public class ModScopeTuiApp implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        // JLine's jansi DLL extraction doesn't work reliably in a native image on Windows.
-        // Force the FFM provider which calls Win32 Console APIs directly via java.lang.foreign.
-        if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
-            System.setProperty("org.jline.terminal.provider", "ffm");
-        }
+        // Enable VT processing + UTF-8 on the Windows console before JLine initialises,
+        // so JLine detects a VT-capable terminal and doesn't fall back to dumb mode.
+        WindowsConsoleInit.apply();
+        System.setProperty("org.jline.terminal.provider", "ffm");
 
         TuiState state = new TuiState();
         state.scanService = scanService;
