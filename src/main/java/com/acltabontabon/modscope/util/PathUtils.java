@@ -7,7 +7,7 @@ public final class PathUtils {
     private PathUtils() {}
 
     public static Path expandHome(String path) {
-        if (path.startsWith("~/") || path.equals("~")) {
+        if (path.equals("~") || path.startsWith("~/") || path.startsWith("~\\")) {
             return Path.of(System.getProperty("user.home"), path.substring(1));
         }
         return Path.of(path);

@@ -55,9 +55,12 @@ public final class SteamLocator {
             proc.waitFor();
             for (String line : output.split("\\r?\\n")) {
                 if (line.contains("SteamPath")) {
-                    String[] parts = line.trim().split("\\s+");
-                    if (parts.length >= 3) {
-                        Path p = Path.of(parts[parts.length - 1]);
+                    // reg query output: "    SteamPath    REG_SZ    C:\path with spaces\Steam"
+                    // split("\\s+") would break paths containing spaces, so find the value after REG_SZ
+                    int marker = line.indexOf("REG_SZ");
+                    if (marker >= 0) {
+                        String value = line.substring(marker + "REG_SZ".length()).trim();
+                        Path p = Path.of(value);
                         if (Files.isDirectory(p)) return Optional.of(p);
                     }
                 }
