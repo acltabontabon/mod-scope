@@ -26,6 +26,12 @@ public class ModScopeTuiApp implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        // JLine's jansi DLL extraction doesn't work reliably in a native image on Windows.
+        // Force the FFM provider which calls Win32 Console APIs directly via java.lang.foreign.
+        if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            System.setProperty("org.jline.terminal.provider", "ffm");
+        }
+
         TuiState state = new TuiState();
         state.scanService = scanService;
 
