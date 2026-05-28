@@ -35,17 +35,21 @@ public final class FileInventoryScanner {
         String filename = file.getFileName().toString();
         FileCategory category = FileClassifier.classify(filename, extension, size);
 
-        long hashLimit = mode == ScanMode.DEEP ? Long.MAX_VALUE : Hashing.DEFAULT_HASH_LIMIT_BYTES;
         String sha256 = null;
         String skipReason = null;
 
-        if (size > hashLimit) {
-            skipReason = "file exceeds " + (hashLimit / (1024 * 1024)) + " MB hash limit";
-        } else if (size <= 0) {
-            skipReason = "empty file";
+        if (mode == ScanMode.QUICK) {
+            skipReason = "quick triage — hashing skipped";
         } else {
-            sha256 = Hashing.sha256(file).orElse(null);
-            if (sha256 == null) skipReason = "read error";
+            long hashLimit = mode == ScanMode.DEEP ? Long.MAX_VALUE : Hashing.DEFAULT_HASH_LIMIT_BYTES;
+            if (size > hashLimit) {
+                skipReason = "file exceeds " + (hashLimit / (1024 * 1024)) + " MB hash limit";
+            } else if (size <= 0) {
+                skipReason = "empty file";
+            } else {
+                sha256 = Hashing.sha256(file).orElse(null);
+                if (sha256 == null) skipReason = "read error";
+            }
         }
 
         return new FileEntry(relativePath, category, extension, size, lastModified, sha256, skipReason);

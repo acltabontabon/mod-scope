@@ -7,5 +7,7 @@ public enum EngineFamily {
     CREATION,
     ANVIL,
     UNITY,
+    REDENGINE,
+    SOURCE,
     UNKNOWN
 }

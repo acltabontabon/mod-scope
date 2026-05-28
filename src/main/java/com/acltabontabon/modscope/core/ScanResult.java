@@ -2,6 +2,7 @@ package com.acltabontabon.modscope.core;
 
 import com.acltabontabon.modscope.engine.EngineDetectionResult;
 import com.acltabontabon.modscope.game.GameInstall;
+import com.acltabontabon.modscope.recommendation.Recommendation;
 import com.acltabontabon.modscope.save.SaveCandidate;
 import com.acltabontabon.modscope.save.SaveFileEntry;
 import com.acltabontabon.modscope.scan.BinaryScanResult;
@@ -23,6 +24,7 @@ public record ScanResult(
     PackageDefinitionAnalysis packageDefinition,
     BinaryScanResult binaryScan,
     ModdingSurfaceScore surfaceScore,
+    List<Recommendation> recommendations,
     Path reportDir,
     String scannedAt,
     ScanOptions options

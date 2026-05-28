@@ -24,5 +24,8 @@ public final class ReportWriter {
         if (!result.binaryScan().allHints().isEmpty()) {
             BinaryStringHintsMarkdownWriter.write(outputDir.resolve("binary-string-hints.md"), result);
         }
+        if (result.recommendations() != null && !result.recommendations().isEmpty()) {
+            RecommendationsMarkdownWriter.write(outputDir.resolve("recommendations.md"), result);
+        }
     }
 }

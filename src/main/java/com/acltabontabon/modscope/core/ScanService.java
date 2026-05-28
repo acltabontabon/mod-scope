@@ -6,6 +6,8 @@ import com.acltabontabon.modscope.game.GameInstall;
 import com.acltabontabon.modscope.game.GameInstallDetector;
 import com.acltabontabon.modscope.game.GameProfile;
 import com.acltabontabon.modscope.game.GameProfileRegistry;
+import com.acltabontabon.modscope.recommendation.Recommendation;
+import com.acltabontabon.modscope.recommendation.RecommendationEngine;
 import com.acltabontabon.modscope.report.ReportWriter;
 import com.acltabontabon.modscope.save.SaveCandidate;
 import com.acltabontabon.modscope.save.SaveFileEntry;
@@ -152,10 +154,19 @@ public class ScanService {
         ScanResult partial = new ScanResult(
             install, saves, saveInventory, files, hints,
             engineDetection, packageDefinition, binaryScan,
-            ModdingSurfaceScore.NONE, options.outputDir(), scannedAt, options
+            ModdingSurfaceScore.NONE, List.of(), options.outputDir(), scannedAt, options
         );
         ModdingSurfaceScore surfaceScore = ModdingSurfaceScore.calculate(files, partial);
         progress.onLog("+ Surface score: " + surfaceScore);
+
+        progress.onPhaseStarted("Generating recommendations");
+        ScanResult scored = new ScanResult(
+            install, saves, saveInventory, files, hints,
+            engineDetection, packageDefinition, binaryScan,
+            surfaceScore, List.of(), options.outputDir(), scannedAt, options
+        );
+        List<Recommendation> recommendations = RecommendationEngine.evaluate(scored);
+        progress.onLog("+ " + recommendations.size() + " recommendation(s)");
 
         progress.onPhaseStarted("Writing reports");
         Path outputDir = options.outputDir();
@@ -164,7 +175,7 @@ public class ScanService {
         ScanResult result = new ScanResult(
             install, saves, saveInventory, files, hints,
             engineDetection, packageDefinition, binaryScan,
-            surfaceScore, outputDir, scannedAt, options
+            surfaceScore, recommendations, outputDir, scannedAt, options
         );
         ReportWriter.write(outputDir, result);
         progress.onLog("+ scan-summary.md");

@@ -41,7 +41,7 @@ class ScanSummaryMarkdownWriterTest {
             Optional.empty(), List.of(), List.of(), files, hints,
             EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(),
             BinaryScanResult.empty(BinaryScanPolicy.conservative()),
-            ModdingSurfaceScore.NONE, tempDir, "2026-05-28T10:00:00Z", options
+            ModdingSurfaceScore.NONE, List.of(), tempDir, "2026-05-28T10:00:00Z", options
         );
 
         Path outFile = tempDir.resolve("scan-summary.md");
@@ -64,7 +64,7 @@ class ScanSummaryMarkdownWriterTest {
             Optional.empty(), List.of(), List.of(), List.of(), List.of(),
             EngineDetectionResult.unknown(), PackageDefinitionAnalysis.notFound(),
             BinaryScanResult.empty(BinaryScanPolicy.conservative()),
-            ModdingSurfaceScore.LOW, tempDir, "2026-05-28T10:00:00Z", options
+            ModdingSurfaceScore.LOW, List.of(), tempDir, "2026-05-28T10:00:00Z", options
         );
 
         Path outFile = tempDir.resolve("scan-summary.md");

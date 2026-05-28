@@ -21,6 +21,7 @@ public final class ScanSummaryMarkdownWriter {
     public static void write(Path outputFile, ScanResult result) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("# Scan Summary\n\n");
+        sb.append("> READ-ONLY SCAN — ModScope did not modify, rename, delete, patch, overwrite, inject, or execute game files.\n\n");
         sb.append("- **Scan date:** ").append(result.scannedAt()).append('\n');
 
         result.install().ifPresentOrElse(
@@ -43,6 +44,10 @@ public final class ScanSummaryMarkdownWriter {
         }
 
         sb.append("- **Modding surface:** ").append(result.surfaceScore()).append('\n');
+        sb.append('\n');
+
+        sb.append("## In plain English\n\n");
+        appendPlainEnglishSummary(sb, result);
         sb.append('\n');
 
         sb.append("## File counts\n\n");
@@ -114,10 +119,55 @@ public final class ScanSummaryMarkdownWriter {
         }
         sb.append('\n');
 
+        if (result.recommendations() != null && !result.recommendations().isEmpty()) {
+            sb.append("## Recommended next actions\n\n");
+            int max = Math.min(3, result.recommendations().size());
+            for (int i = 0; i < max; i++) {
+                var r = result.recommendations().get(i);
+                sb.append("- **").append(r.title()).append("** — ").append(r.reason()).append('\n');
+            }
+            sb.append("\nSee `recommendations.md` for the full ranked list.\n\n");
+        }
+
         sb.append("---\n");
         sb.append("*READ-ONLY SCAN — ModScope did not modify any game files.*\n");
 
         Files.createDirectories(outputFile.getParent());
         Files.writeString(outputFile, sb.toString(), StandardCharsets.UTF_8);
+    }
+
+    private static void appendPlainEnglishSummary(StringBuilder sb, ScanResult result) {
+        long total = result.files().size();
+        long archives = result.files().stream().filter(f -> f.category() == com.acltabontabon.modscope.scan.FileCategory.ARCHIVE).count();
+        long configs = result.files().stream().filter(f ->
+            f.category() == com.acltabontabon.modscope.scan.FileCategory.CONFIG
+            || f.category() == com.acltabontabon.modscope.scan.FileCategory.TEXT).count();
+
+        var eng = result.engineDetection();
+        if (eng.isKnown()) {
+            sb.append("- Likely ").append(eng.primary())
+              .append(" package layout detected from the file signatures listed below.\n");
+        } else {
+            sb.append("- No known engine layout was detected. Inspection will need to be manual.\n");
+        }
+
+        if (archives > 0 && total > 0 && (double) archives / total > 0.4) {
+            sb.append("- This game is archive-heavy. Most content appears to be stored in large package files. ")
+              .append("Loose-file QoL mods may be limited.\n");
+        } else if (archives > 0) {
+            sb.append("- Some packed archives are present; loose-file modding is still possible alongside.\n");
+        }
+
+        if (configs == 0) {
+            sb.append("- No loose config files were found. Simple ini/json tweaks are unlikely from the install folder.\n");
+        } else if (configs < 10) {
+            sb.append("- A small number of loose config files exist; targeted tweaks may be possible.\n");
+        } else {
+            sb.append("- Many loose config/text files exist. This is a strong candidate for config-only mods.\n");
+        }
+
+        if (result.saves().stream().anyMatch(s -> s.exists() && s.sizeBytes() > 0)) {
+            sb.append("- Save data was detected. A simple save-backup workflow is a realistic first quality-of-life feature.\n");
+        }
     }
 }
