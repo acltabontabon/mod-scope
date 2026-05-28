@@ -1,6 +1,7 @@
 package com.acltabontabon.modscope.tui;
 
 import com.acltabontabon.modscope.core.ScanService;
+import com.acltabontabon.modscope.game.GameInstallDetector;
 import com.acltabontabon.modscope.tui.screens.HomeScreen;
 import com.acltabontabon.modscope.tui.screens.ScanProgressScreen;
 import com.acltabontabon.modscope.tui.screens.ScanResultsScreen;
@@ -38,6 +39,7 @@ public class ModScopeTuiApp implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         TuiState state = new TuiState();
         state.scanService = scanService;
+        state.detectedGames = GameInstallDetector.detectAllInstalled();
 
         TuiConfig config = TuiConfig.builder()
             .tickRate(Duration.ofMillis(250))

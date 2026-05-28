@@ -25,6 +25,12 @@ public final class GameProfileRegistry {
         return Optional.ofNullable(PROFILES.get(id));
     }
 
+    public static Optional<GameProfile> findByAppId(String steamAppId) {
+        return PROFILES.values().stream()
+            .filter(p -> p.steamAppId().equals(steamAppId))
+            .findFirst();
+    }
+
     public static Collection<GameProfile> all() {
         return PROFILES.values();
     }

@@ -37,6 +37,7 @@ class SteamAppManifestParserTest {
         assertEquals("007 First Light", result.get().name());
         assertEquals("007 First Light", result.get().installDir());
         assertEquals("4", result.get().stateFlags());
+        assertEquals(tempDir, result.get().steamappsDir());
     }
 
     @Test

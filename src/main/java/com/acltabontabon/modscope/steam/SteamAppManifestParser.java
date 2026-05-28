@@ -37,7 +37,8 @@ public final class SteamAppManifestParser {
             appId,
             name != null ? name : "",
             installDir,
-            fields.getOrDefault("stateflags", "")
+            fields.getOrDefault("stateflags", ""),
+            acfFile.getParent()
         ));
     }
 }

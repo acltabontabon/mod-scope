@@ -2,6 +2,7 @@ package com.acltabontabon.modscope.steam;
 
 import com.acltabontabon.modscope.util.SafeIo;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -42,13 +43,31 @@ public final class SteamLibraryScanner {
     public static Optional<Path> findAppInstallDir(List<Path> libraries, String appId) {
         String manifestName = "appmanifest_" + appId + ".acf";
         for (Path lib : libraries) {
-            Path steamapps = lib.resolve("steamapps");
-            Path manifest = steamapps.resolve(manifestName);
+            Path manifest = lib.resolve("steamapps").resolve(manifestName);
             if (Files.isRegularFile(manifest)) {
                 return SteamAppManifestParser.parse(manifest)
-                    .map(m -> steamapps.resolve("common").resolve(m.installDir()));
+                    .map(SteamAppManifest::resolvedInstallPath);
             }
         }
         return Optional.empty();
+    }
+
+    public static List<SteamAppManifest> allManifests(List<Path> libraries) {
+        List<SteamAppManifest> result = new ArrayList<>();
+        for (Path lib : libraries) {
+            Path steamapps = lib.resolve("steamapps");
+            if (!Files.isDirectory(steamapps)) continue;
+            try (var stream = Files.list(steamapps)) {
+                stream.filter(p -> {
+                    String name = p.getFileName().toString();
+                    return name.startsWith("appmanifest_") && name.endsWith(".acf");
+                })
+                .map(SteamAppManifestParser::parse)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .forEach(result::add);
+            } catch (IOException ignored) {}
+        }
+        return result;
     }
 }

@@ -46,6 +46,33 @@ class SteamLibraryScannerTest {
     }
 
     @Test
+    void allManifestsReturnsInstalledApps() throws IOException {
+        Path steamapps = Files.createDirectories(tempDir.resolve("steamapps"));
+
+        Files.writeString(steamapps.resolve("appmanifest_3768760.acf"), """
+            "AppState"
+            {
+            \t"appid"\t\t"3768760"
+            \t"name"\t\t"007 First Light"
+            \t"installdir"\t\t"007 First Light"
+            }
+            """);
+        Files.writeString(steamapps.resolve("appmanifest_999.acf"), """
+            "AppState"
+            {
+            \t"appid"\t\t"999"
+            \t"name"\t\t"Some Other Game"
+            \t"installdir"\t\t"SomeOtherGame"
+            }
+            """);
+
+        List<SteamAppManifest> manifests = SteamLibraryScanner.allManifests(List.of(tempDir));
+        assertEquals(2, manifests.size());
+        assertTrue(manifests.stream().anyMatch(m -> m.appId().equals("3768760")));
+        assertTrue(manifests.stream().anyMatch(m -> m.appId().equals("999")));
+    }
+
+    @Test
     void findsAppInstallDir() throws IOException {
         Path steamapps = Files.createDirectories(tempDir.resolve("steamapps"));
         Path commonDir = Files.createDirectories(steamapps.resolve("common").resolve("007 First Light"));

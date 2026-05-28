@@ -2,6 +2,7 @@ package com.acltabontabon.modscope.tui;
 
 import com.acltabontabon.modscope.core.ScanResult;
 import com.acltabontabon.modscope.core.ScanService;
+import com.acltabontabon.modscope.game.GameInstall;
 import dev.tamboui.widgets.list.ListState;
 
 import java.util.ArrayList;
@@ -11,15 +12,9 @@ public final class TuiState {
 
     public TuiScreen screen = TuiScreen.HOME;
 
-    // Home screen
+    // Home screen — detected installs populated at startup
     public final ListState homeList = new ListState();
-    public static final String[] HOME_ITEMS = {
-        "Scan detected Steam games",
-        "Scan 007 First Light",
-        "Choose game folder manually",
-        "Open recent report",
-        "Exit"
-    };
+    public List<GameInstall> detectedGames = List.of();
 
     // Scan setup
     public final ListState setupList = new ListState();

@@ -1,5 +1,6 @@
 package com.acltabontabon.modscope.tui.screens;
 
+import com.acltabontabon.modscope.game.GameInstall;
 import com.acltabontabon.modscope.tui.TuiScreen;
 import com.acltabontabon.modscope.tui.TuiState;
 import com.acltabontabon.modscope.tui.components.StatusPanel;
@@ -22,14 +23,17 @@ import dev.tamboui.widgets.block.Title;
 import dev.tamboui.widgets.list.ListWidget;
 import dev.tamboui.widgets.paragraph.Paragraph;
 
+import java.util.List;
+
 public final class HomeScreen {
 
     private HomeScreen() {}
 
     public static boolean handleKey(KeyEvent event, TuiRunner runner, TuiState state) {
+        String[] items = buildMenuItems(state);
         return switch (event) {
             case KeyEvent k when k.isDown() -> {
-                state.homeList.selectNext(TuiState.HOME_ITEMS.length);
+                state.homeList.selectNext(items.length);
                 yield true;
             }
             case KeyEvent k when k.isUp() -> {
@@ -49,28 +53,37 @@ public final class HomeScreen {
     }
 
     private static boolean handleSelection(int index, TuiRunner runner, TuiState state) {
-        switch (index) {
-            case 0 -> { // Scan detected Steam games
-                state.setupProfileId = null;
-                state.setupGameDir = "";
-                state.screen = TuiScreen.SCAN_SETUP;
+        List<GameInstall> games = state.detectedGames;
+        if (index < games.size()) {
+            // Selected a detected game
+            state.setupProfileId = games.get(index).profile().id();
+            state.setupGameDir = games.get(index).installPath().toString();
+            state.screen = TuiScreen.SCAN_SETUP;
+        } else {
+            int tail = index - games.size();
+            switch (tail) {
+                case 0 -> { // Scan folder manually
+                    state.setupProfileId = null;
+                    state.setupGameDir = "";
+                    state.screen = TuiScreen.SCAN_SETUP;
+                }
+                case 1 -> runner.quit(); // Exit
             }
-            case 1 -> { // Scan 007 First Light
-                state.setupProfileId = "007-first-light";
-                state.setupGameDir = "";
-                state.screen = TuiScreen.SCAN_SETUP;
-            }
-            case 2 -> { // Choose game folder manually
-                state.setupProfileId = null;
-                state.setupGameDir = "";
-                state.screen = TuiScreen.SCAN_SETUP;
-            }
-            case 3 -> { // Open recent report — not yet implemented
-                // no-op for MVP
-            }
-            case 4 -> runner.quit(); // Exit
         }
         return true;
+    }
+
+    static String[] buildMenuItems(TuiState state) {
+        List<GameInstall> games = state.detectedGames;
+        String[] items = new String[games.size() + 2];
+        for (int i = 0; i < games.size(); i++) {
+            GameInstall g = games.get(i);
+            items[i] = "Scan " + g.profile().displayName();
+        }
+        int tail = games.size();
+        items[tail]     = games.isEmpty() ? "Scan game folder manually" : "Scan a different folder";
+        items[tail + 1] = "Exit";
+        return items;
     }
 
     public static void render(Frame frame, TuiState state) {
@@ -84,36 +97,49 @@ public final class HomeScreen {
         Rect inner = outerBlock.inner(area);
         frame.renderWidget(outerBlock, area);
 
+        int y = inner.y();
+
         // Tagline
-        Rect taglineArea = Rect.of(new Position(inner.x(), inner.y()), new Size(inner.width(), 1));
         frame.renderWidget(
             Paragraph.builder()
                 .text(Text.from(Line.from(
                     Span.styled("  Inspect game files before building mods.", Style.EMPTY.fg(Color.GRAY))
                 )))
                 .build(),
-            taglineArea
+            Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
         );
 
         // Safety note
-        Rect noteArea = Rect.of(new Position(inner.x(), inner.y() + 1), new Size(inner.width(), 1));
         frame.renderWidget(
             Paragraph.builder()
                 .text(Text.from(Line.from(
                     Span.styled("  READ-ONLY — ModScope will not modify game files.", Style.EMPTY.fg(Color.GREEN))
                 )))
                 .build(),
-            noteArea
+            Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
         );
 
-        // Menu list
-        int listTop = inner.y() + 3;
-        int listHeight = inner.height() - 5;
+        // Detection status line
+        String detectionLine = state.detectedGames.isEmpty()
+            ? "  No supported Steam games detected."
+            : "  " + state.detectedGames.size() + " supported game(s) detected via Steam:";
+        frame.renderWidget(
+            Paragraph.builder()
+                .text(Text.from(Line.from(
+                    Span.styled(detectionLine, Style.EMPTY.fg(Color.CYAN))
+                )))
+                .build(),
+            Rect.of(new Position(inner.x(), y++), new Size(inner.width(), 1))
+        );
+
+        y++; // spacer before menu
+
+        int listHeight = inner.height() - (y - inner.y()) - 2;
         if (listHeight > 0) {
-            Rect listArea = Rect.of(new Position(inner.x(), listTop), new Size(inner.width(), listHeight));
+            Rect listArea = Rect.of(new Position(inner.x(), y), new Size(inner.width(), listHeight));
             frame.renderStatefulWidget(
                 ListWidget.builder()
-                    .items(TuiState.HOME_ITEMS)
+                    .items(buildMenuItems(state))
                     .highlightStyle(Style.EMPTY.fg(Color.CYAN).addModifier(Modifier.BOLD))
                     .highlightSymbol("▶ ")
                     .build(),
